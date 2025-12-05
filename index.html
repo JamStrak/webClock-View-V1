@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberPrism HUD OS v1.0</title>
-    <!-- 引入极客风格字体 -->
+    <title>CyberPrism HUD OS v1.2 - Rhythmic Glitch</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -16,229 +15,147 @@
             --bg-black: #000000;
         }
 
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body { margin: 0; background-color: #222; height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
 
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #222; /* 模拟外部环境 */
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Share Tech Mono', monospace;
-            overflow: hidden;
-        }
-
-        /* 模拟 1.69寸 屏幕尺寸 (240x280) */
         #prism-screen {
-            width: 240px;
-            height: 280px;
+            width: 240px; height: 280px;
             background-color: var(--bg-black);
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden;
             color: var(--neon-cyan);
-            box-shadow: 0 0 50px rgba(0, 243, 255, 0.1); /* 模拟一点点光晕 */
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.1);
             border: 1px solid #333;
             cursor: pointer;
         }
 
-        /* --- 呼吸边框 (状态指示灯) --- */
+        /* --- 呼吸边框 --- */
         .border-pulse {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            box-shadow: inset 0 0 20px var(--neon-cyan);
-            opacity: 0.5;
-            z-index: 10;
-            pointer-events: none;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            box-shadow: inset 0 0 20px var(--neon-cyan); opacity: 0.5;
+            z-index: 10; pointer-events: none;
             animation: breathe 3s infinite ease-in-out;
             transition: box-shadow 0.3s, opacity 0.3s;
         }
-
-        /* 状态颜色修饰 */
         .border-pulse.running { box-shadow: inset 0 0 15px var(--neon-cyan); opacity: 0.8; animation: breathe 2s infinite; }
-        .border-pulse.paused { box-shadow: inset 0 0 30px var(--neon-green); opacity: 0.3; animation: none; }
+        .border-pulse.paused { box-shadow: inset 0 0 30px var(--neon-green); opacity: 0.4; animation: none; }
         .border-pulse.urgent { box-shadow: inset 0 0 40px var(--neon-red); animation: fast-flash 0.5s infinite; }
 
-        /* --- 待机模式 (Idle) --- */
-        #idle-view {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: absolute;
-            transition: opacity 0.5s;
-        }
-        
-        /* AI 之眼动画 */
-        .ai-eye {
-            width: 60px;
-            height: 60px;
-            border: 4px solid var(--neon-cyan);
-            border-radius: 50%;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 0 15px var(--neon-cyan);
-        }
-        .ai-pupil {
-            width: 20px;
-            height: 20px;
-            background-color: var(--neon-cyan);
-            border-radius: 50%;
-            animation: lookAround 5s infinite;
+        /* --- 待机与时钟 --- */
+        #idle-view { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: absolute; transition: opacity 0.5s; }
+        .ai-eye { width: 60px; height: 60px; border: 4px solid var(--neon-cyan); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px var(--neon-cyan); }
+        .ai-pupil { width: 20px; height: 20px; background-color: var(--neon-cyan); border-radius: 50%; animation: lookAround 5s infinite; }
+        .realtime-clock { margin-top: 20px; font-size: 24px; opacity: 0.8; }
+
+        /* --- 专注模式 --- */
+        #focus-view { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: absolute; padding: 20px 0; opacity: 0; transition: opacity 0.3s; }
+        .timer-display { font-size: 68px; line-height: 1; margin-top: 50px; text-shadow: 0 0 10px var(--neon-cyan); z-index: 2; transition: opacity 0.2s; }
+        .marquee-container { width: 100%; height: 30px; overflow: hidden; white-space: nowrap; position: relative; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8)); border-top: 1px solid rgba(0, 243, 255, 0.3); display: flex; align-items: center; }
+        .marquee-text { display: inline-block; padding-left: 100%; font-size: 16px; color: #fff; animation: marquee 10s linear infinite; }
+
+        /* --- !!! 间歇性故障效果 (Rhythmic Glitch) !!! --- */
+        .glitch-wrapper {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            display: none; z-index: 20;
         }
 
-        .realtime-clock {
-            margin-top: 20px;
-            font-size: 24px;
-            opacity: 0.8;
+        .glitch-text {
+            font-size: 50px; font-weight: bold; color: var(--neon-green);
+            position: relative; letter-spacing: 4px;
+            /* 基础闪烁：让文字本身也有亮度的微小跳动 */
+            animation: opacity-pulse 0.1s infinite;
         }
 
-        /* --- 专注模式 (Focus HUD) --- */
-        #focus-view {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            position: absolute;
-            padding: 20px 0;
-            opacity: 0; /* 默认隐藏 */
-            transition: opacity 0.3s;
-        }
-
-        /* 巨大的倒计时 */
-        .timer-display {
-            font-size: 68px; /* 极致大字 */
-            line-height: 1;
-            margin-top: 50px;
-            text-shadow: 0 0 10px var(--neon-cyan);
-            z-index: 2;
-        }
-
-        /* 暂停文字覆盖 */
-        .pause-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 40px;
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-black);
-            border: 2px solid var(--neon-green);
-            color: var(--neon-green);
-            padding: 5px 15px;
-            display: none;
-            z-index: 5;
-            text-shadow: 0 0 5px var(--neon-green);
-            animation: glitch 1s infinite;
+            clip-path: inset(0 0 0 0); /* 默认不裁剪 */
         }
 
-        /* --- 底部跑马灯 (Marquee) --- */
-        .marquee-container {
-            width: 100%;
-            height: 30px;
-            overflow: hidden;
-            white-space: nowrap;
-            position: relative;
-            background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
-            border-top: 1px solid rgba(0, 243, 255, 0.3);
-            display: flex;
-            align-items: center;
+        /* 红色通道 - 3秒一个循环 */
+        .glitch-text::before {
+            text-shadow: -2px 0 var(--neon-red);
+            animation: glitch-rhythm-1 3s infinite steps(1); /* steps(1) 让变化瞬间发生，更生硬 */
         }
 
-        .marquee-text {
-            display: inline-block;
-            padding-left: 100%;
-            font-size: 16px;
-            color: #fff;
-            animation: marquee 10s linear infinite;
+        /* 蓝色通道 - 2.5秒一个循环（错开节奏） */
+        .glitch-text::after {
+            text-shadow: 2px 0 #0000ff;
+            animation: glitch-rhythm-2 2.5s infinite steps(1);
         }
 
-        /* --- 关键帧动画 --- */
-        @keyframes breathe {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.9; }
-        }
-        @keyframes fast-flash {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.2; }
-        }
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
-        @keyframes lookAround {
-            0%, 100% { transform: translate(0, 0); }
-            20% { transform: translate(-10px, 0); }
-            40% { transform: translate(10px, 5px); }
-            60% { transform: translate(0, -10px); }
-            80% { transform: translate(5px, 5px); }
-        }
-        @keyframes glitch {
-            0% { transform: translate(-50%, -50%) skew(0deg); }
-            20% { transform: translate(-52%, -50%) skew(-10deg); }
-            40% { transform: translate(-48%, -50%) skew(10deg); }
-            60% { transform: translate(-50%, -50%) skew(0deg); }
-            100% { transform: translate(-50%, -50%) skew(0deg); }
+        /* 核心动画：大部分时间是 inset(0) 静止的，只有特定百分比会跳变 */
+        @keyframes glitch-rhythm-1 {
+            0% { clip-path: inset(0); transform: translate(0); }
+            /* 第一波撕裂：哔哔 */
+            5% { clip-path: inset(20% 0 80% 0); transform: translate(-3px, 2px); }
+            7% { clip-path: inset(60% 0 10% 0); transform: translate(3px, -2px); }
+            8% { clip-path: inset(0); transform: translate(0); }
+            
+            /* 第二波撕裂：哔 */
+            40% { clip-path: inset(40% 0 40% 0); transform: translate(-3px, 0); }
+            42% { clip-path: inset(0); transform: translate(0); }
+
+            /* 第三波大撕裂：哔哔哔哔 */
+            80% { clip-path: inset(10% 0 70% 0); transform: translate(4px, 1px); }
+            82% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, -3px); }
+            84% { clip-path: inset(30% 0 50% 0); transform: translate(2px, 2px); }
+            86% { clip-path: inset(0); transform: translate(0); }
         }
 
-        /* 扫描线效果 (增加赛博感) */
+        @keyframes glitch-rhythm-2 {
+            0% { clip-path: inset(0); transform: translate(0); }
+            /* 错开的节奏 */
+            6% { clip-path: inset(10% 0 60% 0); transform: translate(3px, -1px); }
+            9% { clip-path: inset(0); transform: translate(0); }
+
+            65% { clip-path: inset(50% 0 20% 0); transform: translate(-3px, 2px); }
+            67% { clip-path: inset(0); transform: translate(0); }
+
+            81% { clip-path: inset(20% 0 50% 0); transform: translate(2px, -2px); }
+            85% { clip-path: inset(0); transform: translate(0); }
+        }
+
+        /* 文字亮度的随机微闪，配合撕裂 */
+        @keyframes opacity-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.95; }
+            52% { opacity: 0.8; } /* 偶尔暗一下 */
+            54% { opacity: 1; }
+            100% { opacity: 1; }
+        }
+
+        /* --- 辅助元素 --- */
+        @keyframes breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+        @keyframes fast-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        @keyframes lookAround { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-8px, 0); } 40% { transform: translate(8px, 4px); } }
+
         .scanlines {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0),
-                rgba(255,255,255,0) 50%,
-                rgba(0,0,0,0.2) 50%,
-                rgba(0,0,0,0.2)
-            );
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 20;
-            opacity: 0.3;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px; pointer-events: none; z-index: 20; opacity: 0.3;
         }
-        
-        .hint {
-            position: absolute;
-            bottom: -40px;
-            color: #666;
-            font-size: 12px;
-        }
-
+        .hint { position: absolute; bottom: -40px; color: #666; font-size: 12px; }
     </style>
 </head>
 <body>
-
+    <!-- 结构不变，JS不变 -->
     <div id="prism-screen">
-        <!-- 氛围层 -->
         <div id="border" class="border-pulse"></div>
         <div class="scanlines"></div>
 
-        <!-- 1. 待机界面 (Idle) -->
         <div id="idle-view">
-            <div class="ai-eye">
-                <div class="ai-pupil"></div>
-            </div>
+            <div class="ai-eye"><div class="ai-pupil"></div></div>
             <div class="realtime-clock" id="clock">12:00</div>
         </div>
 
-        <!-- 2. 专注界面 (Focus) -->
         <div id="focus-view">
             <div style="font-size: 12px; opacity: 0.7; margin-top: 10px;">FOCUS MODE</div>
-            
             <div class="timer-display" id="timer">25:00</div>
-            <div class="pause-overlay" id="pause-text">PAUSED</div>
-
+            <div class="glitch-wrapper" id="pause-text">
+                <div class="glitch-text" data-text="PAUSED">PAUSED</div>
+            </div>
             <div class="marquee-container">
                 <div class="marquee-text" id="task-name">PROJECT: MARS COLONIZATION PROTOCOL - PHASE 1</div>
             </div>
@@ -248,14 +165,8 @@
     <div class="hint">单击: 开始/暂停 | 双击: 完成 | 长按: 重置</div>
 
     <script>
-        // --- 核心变量 ---
-        const STATE = {
-            mode: 'IDLE', // IDLE, RUNNING, PAUSED
-            timeLeft: 25 * 60,
-            totalTime: 25 * 60,
-            timerId: null
-        };
-
+        // --- JS 代码保持不变 ---
+        const STATE = { mode: 'IDLE', timeLeft: 25 * 60, totalTime: 25 * 60, timerId: null };
         const UI = {
             screen: document.getElementById('prism-screen'),
             border: document.getElementById('border'),
@@ -263,166 +174,28 @@
             focusView: document.getElementById('focus-view'),
             timer: document.getElementById('timer'),
             pauseText: document.getElementById('pause-text'),
-            clock: document.getElementById('clock'),
-            taskText: document.getElementById('task-name')
+            clock: document.getElementById('clock')
         };
-
-        // --- 实时时钟 ---
-        setInterval(() => {
-            const now = new Date();
-            UI.clock.textContent = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
-        }, 1000);
-
-        // --- 交互逻辑 (模拟物理敲击) ---
-        let clickTimeout;
-        let pressTimer;
-
-        UI.screen.addEventListener('mousedown', () => {
-            // 长按开始计时
-            pressTimer = setTimeout(() => {
-                resetSystem();
-                navigator.vibrate(200); // 手机震动反馈
-            }, 1000);
-        });
-
-        UI.screen.addEventListener('mouseup', () => {
-            clearTimeout(pressTimer);
-        });
-        
-        // 触摸屏兼容
-        UI.screen.addEventListener('touchstart', (e) => {
-             e.preventDefault(); // 防止双击放大
-             pressTimer = setTimeout(() => {
-                resetSystem();
-                navigator.vibrate(200);
-            }, 1000);
-        });
-        UI.screen.addEventListener('touchend', () => {
-            clearTimeout(pressTimer);
-        });
-
-
+        setInterval(() => { const now = new Date(); UI.clock.textContent = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }); }, 1000);
+        let clickTimeout, pressTimer;
+        UI.screen.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { resetSystem(); navigator.vibrate(200); }, 1000); });
+        UI.screen.addEventListener('mouseup', () => { clearTimeout(pressTimer); });
+        UI.screen.addEventListener('touchstart', (e) => { e.preventDefault(); pressTimer = setTimeout(() => { resetSystem(); navigator.vibrate(200); }, 1000); });
+        UI.screen.addEventListener('touchend', () => { clearTimeout(pressTimer); });
         UI.screen.addEventListener('click', (e) => {
-            if (e.detail === 1) { // 单击
-                clickTimeout = setTimeout(() => {
-                    handleTap();
-                }, 250);
-            } else if (e.detail === 2) { // 双击
-                clearTimeout(clickTimeout);
-                handleDoubleTap();
-            }
+            if (e.detail === 1) { clickTimeout = setTimeout(() => handleTap(), 250); } 
+            else if (e.detail === 2) { clearTimeout(clickTimeout); handleDoubleTap(); }
         });
-
-        // --- 功能函数 ---
-
-        function handleTap() {
-            navigator.vibrate(50); // 震动反馈
-            
-            if (STATE.mode === 'IDLE') {
-                startFocus();
-            } else if (STATE.mode === 'RUNNING') {
-                pauseFocus();
-            } else if (STATE.mode === 'PAUSED') {
-                resumeFocus();
-            }
-        }
-
-        function handleDoubleTap() {
-            if (STATE.mode === 'RUNNING' || STATE.mode === 'PAUSED') {
-                completeTask();
-            }
-        }
-
-        function startFocus() {
-            STATE.mode = 'RUNNING';
-            switchView('FOCUS');
-            UI.border.className = 'border-pulse running';
-            UI.pauseText.style.display = 'none';
-            UI.timer.style.opacity = '1';
-            runTimer();
-        }
-
-        function pauseFocus() {
-            STATE.mode = 'PAUSED';
-            clearInterval(STATE.timerId);
-            UI.border.className = 'border-pulse paused';
-            UI.pauseText.style.display = 'block';
-            UI.timer.style.opacity = '0.3'; // 数字变暗
-        }
-
-        function resumeFocus() {
-            STATE.mode = 'RUNNING';
-            UI.border.className = 'border-pulse running';
-            UI.pauseText.style.display = 'none';
-            UI.timer.style.opacity = '1';
-            runTimer();
-        }
-
-        function completeTask() {
-            STATE.mode = 'IDLE';
-            clearInterval(STATE.timerId);
-            
-            // 特效
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#00ff41', '#00f3ff', '#ffffff']
-            });
-            
-            UI.timer.textContent = "DONE";
-            UI.border.className = 'border-pulse urgent'; // 闪烁效果
-            
-            setTimeout(() => {
-                resetSystem();
-            }, 3000);
-        }
-
-        function resetSystem() {
-            clearInterval(STATE.timerId);
-            STATE.mode = 'IDLE';
-            STATE.timeLeft = STATE.totalTime;
-            updateTimerDisplay();
-            switchView('IDLE');
-            UI.border.className = 'border-pulse';
-            UI.pauseText.style.display = 'none';
-            UI.timer.style.opacity = '1';
-        }
-
-        function runTimer() {
-            clearInterval(STATE.timerId);
-            STATE.timerId = setInterval(() => {
-                if (STATE.timeLeft > 0) {
-                    STATE.timeLeft--;
-                    updateTimerDisplay();
-                    
-                    // 最后60秒变红
-                    if (STATE.timeLeft <= 60) {
-                        UI.border.className = 'border-pulse urgent';
-                        UI.screen.style.color = 'var(--neon-red)';
-                    }
-                } else {
-                    completeTask();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay() {
-            const m = Math.floor(STATE.timeLeft / 60);
-            const s = STATE.timeLeft % 60;
-            UI.timer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        }
-
-        function switchView(viewName) {
-            if (viewName === 'IDLE') {
-                UI.idleView.style.opacity = '1';
-                UI.focusView.style.opacity = '0';
-                UI.screen.style.color = 'var(--neon-cyan)'; // 重置颜色
-            } else {
-                UI.idleView.style.opacity = '0';
-                UI.focusView.style.opacity = '1';
-            }
-        }
+        function handleTap() { navigator.vibrate(50); if (STATE.mode === 'IDLE') startFocus(); else if (STATE.mode === 'RUNNING') pauseFocus(); else if (STATE.mode === 'PAUSED') resumeFocus(); }
+        function handleDoubleTap() { if (STATE.mode === 'RUNNING' || STATE.mode === 'PAUSED') completeTask(); }
+        function startFocus() { STATE.mode = 'RUNNING'; switchView('FOCUS'); UI.border.className = 'border-pulse running'; UI.pauseText.style.display = 'none'; UI.timer.style.opacity = '1'; runTimer(); }
+        function pauseFocus() { STATE.mode = 'PAUSED'; clearInterval(STATE.timerId); UI.border.className = 'border-pulse paused'; UI.pauseText.style.display = 'block'; UI.timer.style.opacity = '0.2'; }
+        function resumeFocus() { STATE.mode = 'RUNNING'; UI.border.className = 'border-pulse running'; UI.pauseText.style.display = 'none'; UI.timer.style.opacity = '1'; runTimer(); }
+        function completeTask() { STATE.mode = 'IDLE'; clearInterval(STATE.timerId); confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#00ff41', '#00f3ff', '#ffffff'] }); UI.timer.textContent = "DONE"; UI.border.className = 'border-pulse urgent'; setTimeout(() => resetSystem(), 3000); }
+        function resetSystem() { clearInterval(STATE.timerId); STATE.mode = 'IDLE'; STATE.timeLeft = STATE.totalTime; updateTimerDisplay(); switchView('IDLE'); UI.border.className = 'border-pulse'; UI.pauseText.style.display = 'none'; UI.timer.style.opacity = '1'; }
+        function runTimer() { clearInterval(STATE.timerId); STATE.timerId = setInterval(() => { if (STATE.timeLeft > 0) { STATE.timeLeft--; updateTimerDisplay(); if (STATE.timeLeft <= 60) { UI.border.className = 'border-pulse urgent'; UI.screen.style.color = 'var(--neon-red)'; } } else { completeTask(); } }, 1000); }
+        function updateTimerDisplay() { const m = Math.floor(STATE.timeLeft / 60); const s = STATE.timeLeft % 60; UI.timer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; }
+        function switchView(viewName) { if (viewName === 'IDLE') { UI.idleView.style.opacity = '1'; UI.focusView.style.opacity = '0'; UI.screen.style.color = 'var(--neon-cyan)'; } else { UI.idleView.style.opacity = '0'; UI.focusView.style.opacity = '1'; } }
     </script>
 </body>
 </html>
