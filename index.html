@@ -2,8 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberPrism HUD OS v1.2 - Rhythmic Glitch</title>
+    <!-- 强制禁止缩放，关键配置 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>CyberPrism HUD Mobile</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -15,8 +17,26 @@
             --bg-black: #000000;
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
-        body { margin: 0; background-color: #222; height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
+        * { 
+            box-sizing: border-box; 
+            user-select: none; 
+            -webkit-user-select: none; 
+            -webkit-tap-highlight-color: transparent; /* 去除点击高亮 */
+        }
+        
+        body { 
+            margin: 0; 
+            background-color: #222; 
+            height: 100vh; 
+            width: 100vw;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-family: 'Share Tech Mono', monospace; 
+            overflow: hidden; 
+            /* 防止移动端回弹效果 */
+            overscroll-behavior: none;
+        }
 
         #prism-screen {
             width: 240px; height: 280px;
@@ -25,6 +45,8 @@
             color: var(--neon-cyan);
             box-shadow: 0 0 50px rgba(0, 243, 255, 0.1);
             border: 1px solid #333;
+            /* 关键：让触摸操作更顺滑 */
+            touch-action: none; 
             cursor: pointer;
         }
 
@@ -40,107 +62,39 @@
         .border-pulse.paused { box-shadow: inset 0 0 30px var(--neon-green); opacity: 0.4; animation: none; }
         .border-pulse.urgent { box-shadow: inset 0 0 40px var(--neon-red); animation: fast-flash 0.5s infinite; }
 
-        /* --- 待机与时钟 --- */
+        /* --- 界面元素 --- */
         #idle-view { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: absolute; transition: opacity 0.5s; }
         .ai-eye { width: 60px; height: 60px; border: 4px solid var(--neon-cyan); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px var(--neon-cyan); }
         .ai-pupil { width: 20px; height: 20px; background-color: var(--neon-cyan); border-radius: 50%; animation: lookAround 5s infinite; }
         .realtime-clock { margin-top: 20px; font-size: 24px; opacity: 0.8; }
 
-        /* --- 专注模式 --- */
         #focus-view { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: absolute; padding: 20px 0; opacity: 0; transition: opacity 0.3s; }
-        .timer-display { font-size: 68px; line-height: 1; margin-top: 50px; text-shadow: 0 0 10px var(--neon-cyan); z-index: 2; transition: opacity 0.2s; }
+        .timer-display { font-size: 68px; line-height: 1; margin-top: 50px; text-shadow: 0 0 10px var(--neon-cyan); z-index: 2; transition: opacity 0.2s; pointer-events: none; } /* 防止点击文字无法触发背景事件 */
         .marquee-container { width: 100%; height: 30px; overflow: hidden; white-space: nowrap; position: relative; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8)); border-top: 1px solid rgba(0, 243, 255, 0.3); display: flex; align-items: center; }
         .marquee-text { display: inline-block; padding-left: 100%; font-size: 16px; color: #fff; animation: marquee 10s linear infinite; }
 
-        /* --- !!! 间歇性故障效果 (Rhythmic Glitch) !!! --- */
-        .glitch-wrapper {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            display: none; z-index: 20;
-        }
+        /* --- 故障效果 (保持 v1.2 的节奏感) --- */
+        .glitch-wrapper { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 20; pointer-events: none; }
+        .glitch-text { font-size: 50px; font-weight: bold; color: var(--neon-green); position: relative; letter-spacing: 4px; animation: opacity-pulse 0.1s infinite; }
+        .glitch-text::before, .glitch-text::after { content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-black); clip-path: inset(0 0 0 0); }
+        .glitch-text::before { text-shadow: -2px 0 var(--neon-red); animation: glitch-rhythm-1 3s infinite steps(1); }
+        .glitch-text::after { text-shadow: 2px 0 #0000ff; animation: glitch-rhythm-2 2.5s infinite steps(1); }
 
-        .glitch-text {
-            font-size: 50px; font-weight: bold; color: var(--neon-green);
-            position: relative; letter-spacing: 4px;
-            /* 基础闪烁：让文字本身也有亮度的微小跳动 */
-            animation: opacity-pulse 0.1s infinite;
-        }
-
-        .glitch-text::before,
-        .glitch-text::after {
-            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-black);
-            clip-path: inset(0 0 0 0); /* 默认不裁剪 */
-        }
-
-        /* 红色通道 - 3秒一个循环 */
-        .glitch-text::before {
-            text-shadow: -2px 0 var(--neon-red);
-            animation: glitch-rhythm-1 3s infinite steps(1); /* steps(1) 让变化瞬间发生，更生硬 */
-        }
-
-        /* 蓝色通道 - 2.5秒一个循环（错开节奏） */
-        .glitch-text::after {
-            text-shadow: 2px 0 #0000ff;
-            animation: glitch-rhythm-2 2.5s infinite steps(1);
-        }
-
-        /* 核心动画：大部分时间是 inset(0) 静止的，只有特定百分比会跳变 */
-        @keyframes glitch-rhythm-1 {
-            0% { clip-path: inset(0); transform: translate(0); }
-            /* 第一波撕裂：哔哔 */
-            5% { clip-path: inset(20% 0 80% 0); transform: translate(-3px, 2px); }
-            7% { clip-path: inset(60% 0 10% 0); transform: translate(3px, -2px); }
-            8% { clip-path: inset(0); transform: translate(0); }
-            
-            /* 第二波撕裂：哔 */
-            40% { clip-path: inset(40% 0 40% 0); transform: translate(-3px, 0); }
-            42% { clip-path: inset(0); transform: translate(0); }
-
-            /* 第三波大撕裂：哔哔哔哔 */
-            80% { clip-path: inset(10% 0 70% 0); transform: translate(4px, 1px); }
-            82% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, -3px); }
-            84% { clip-path: inset(30% 0 50% 0); transform: translate(2px, 2px); }
-            86% { clip-path: inset(0); transform: translate(0); }
-        }
-
-        @keyframes glitch-rhythm-2 {
-            0% { clip-path: inset(0); transform: translate(0); }
-            /* 错开的节奏 */
-            6% { clip-path: inset(10% 0 60% 0); transform: translate(3px, -1px); }
-            9% { clip-path: inset(0); transform: translate(0); }
-
-            65% { clip-path: inset(50% 0 20% 0); transform: translate(-3px, 2px); }
-            67% { clip-path: inset(0); transform: translate(0); }
-
-            81% { clip-path: inset(20% 0 50% 0); transform: translate(2px, -2px); }
-            85% { clip-path: inset(0); transform: translate(0); }
-        }
-
-        /* 文字亮度的随机微闪，配合撕裂 */
-        @keyframes opacity-pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.95; }
-            52% { opacity: 0.8; } /* 偶尔暗一下 */
-            54% { opacity: 1; }
-            100% { opacity: 1; }
-        }
-
-        /* --- 辅助元素 --- */
+        /* --- 动画定义 --- */
+        @keyframes glitch-rhythm-1 { 0% { clip-path: inset(0); transform: translate(0); } 5% { clip-path: inset(20% 0 80% 0); transform: translate(-3px, 2px); } 7% { clip-path: inset(60% 0 10% 0); transform: translate(3px, -2px); } 8% { clip-path: inset(0); transform: translate(0); } 40% { clip-path: inset(40% 0 40% 0); transform: translate(-3px, 0); } 42% { clip-path: inset(0); transform: translate(0); } 80% { clip-path: inset(10% 0 70% 0); transform: translate(4px, 1px); } 82% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, -3px); } 84% { clip-path: inset(30% 0 50% 0); transform: translate(2px, 2px); } 86% { clip-path: inset(0); transform: translate(0); } }
+        @keyframes glitch-rhythm-2 { 0% { clip-path: inset(0); transform: translate(0); } 6% { clip-path: inset(10% 0 60% 0); transform: translate(3px, -1px); } 9% { clip-path: inset(0); transform: translate(0); } 65% { clip-path: inset(50% 0 20% 0); transform: translate(-3px, 2px); } 67% { clip-path: inset(0); transform: translate(0); } 81% { clip-path: inset(20% 0 50% 0); transform: translate(2px, -2px); } 85% { clip-path: inset(0); transform: translate(0); } }
+        @keyframes opacity-pulse { 0% { opacity: 1; } 50% { opacity: 0.95; } 52% { opacity: 0.8; } 54% { opacity: 1; } 100% { opacity: 1; } }
         @keyframes breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
         @keyframes fast-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         @keyframes lookAround { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-8px, 0); } 40% { transform: translate(8px, 4px); } }
-
-        .scanlines {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
-            background-size: 100% 4px; pointer-events: none; z-index: 20; opacity: 0.3;
-        }
-        .hint { position: absolute; bottom: -40px; color: #666; font-size: 12px; }
+        
+        .scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2)); background-size: 100% 4px; pointer-events: none; z-index: 20; opacity: 0.3; }
+        .hint { position: absolute; bottom: -40px; color: #666; font-size: 12px; width: 100%; text-align: center; }
     </style>
 </head>
 <body>
-    <!-- 结构不变，JS不变 -->
+
     <div id="prism-screen">
         <div id="border" class="border-pulse"></div>
         <div class="scanlines"></div>
@@ -165,8 +119,10 @@
     <div class="hint">单击: 开始/暂停 | 双击: 完成 | 长按: 重置</div>
 
     <script>
-        // --- JS 代码保持不变 ---
+        // --- 状态管理 ---
         const STATE = { mode: 'IDLE', timeLeft: 25 * 60, totalTime: 25 * 60, timerId: null };
+        
+        // --- UI 引用 ---
         const UI = {
             screen: document.getElementById('prism-screen'),
             border: document.getElementById('border'),
@@ -176,26 +132,118 @@
             pauseText: document.getElementById('pause-text'),
             clock: document.getElementById('clock')
         };
-        setInterval(() => { const now = new Date(); UI.clock.textContent = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }); }, 1000);
-        let clickTimeout, pressTimer;
-        UI.screen.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { resetSystem(); navigator.vibrate(200); }, 1000); });
-        UI.screen.addEventListener('mouseup', () => { clearTimeout(pressTimer); });
-        UI.screen.addEventListener('touchstart', (e) => { e.preventDefault(); pressTimer = setTimeout(() => { resetSystem(); navigator.vibrate(200); }, 1000); });
-        UI.screen.addEventListener('touchend', () => { clearTimeout(pressTimer); });
-        UI.screen.addEventListener('click', (e) => {
-            if (e.detail === 1) { clickTimeout = setTimeout(() => handleTap(), 250); } 
-            else if (e.detail === 2) { clearTimeout(clickTimeout); handleDoubleTap(); }
-        });
-        function handleTap() { navigator.vibrate(50); if (STATE.mode === 'IDLE') startFocus(); else if (STATE.mode === 'RUNNING') pauseFocus(); else if (STATE.mode === 'PAUSED') resumeFocus(); }
-        function handleDoubleTap() { if (STATE.mode === 'RUNNING' || STATE.mode === 'PAUSED') completeTask(); }
+
+        // --- 实时时钟 ---
+        setInterval(() => { 
+            const now = new Date(); 
+            UI.clock.textContent = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }); 
+        }, 1000);
+
+        // --- 核心交互逻辑 (Unified Touch/Click System) ---
+        // 这是一个能够完美兼容 PC 鼠标和 Mobile 触摸的识别系统
+        // 它绕过了 click 事件，直接通过按下和抬起的时间差来判断操作
+        
+        let interactStartTime = 0;
+        let lastTapTime = 0;
+        let longPressTimer = null;
+        let singleTapTimer = null;
+        let isLongPressHandled = false;
+
+        // 1. 按下 (Touch Start / Mouse Down)
+        function handleInputStart(e) {
+            // 阻止默认行为，防止出现双击放大和原生点击冲突
+            if (e.cancelable) e.preventDefault();
+
+            interactStartTime = new Date().getTime();
+            isLongPressHandled = false;
+
+            // 设置长按定时器 (800ms)
+            longPressTimer = setTimeout(() => {
+                handleLongPress();
+                isLongPressHandled = true;
+            }, 800);
+        }
+
+        // 2. 抬起 (Touch End / Mouse Up)
+        function handleInputEnd(e) {
+            // 如果长按已经触发，就忽略抬起动作
+            if (isLongPressHandled) return;
+
+            // 清除长按定时器
+            clearTimeout(longPressTimer);
+
+            const now = new Date().getTime();
+            const duration = now - interactStartTime;
+
+            // 如果按下时间很短 (<200ms)，我们认为是一次点击
+            if (duration < 200) {
+                const timeSinceLastTap = now - lastTapTime;
+
+                // 判断双击：如果距离上次点击小于 300ms
+                if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+                    clearTimeout(singleTapTimer); // 取消单击
+                    handleDoubleTap();
+                    lastTapTime = 0; // 重置防止三连击
+                } else {
+                    // 延迟触发单击，因为要等待看看是不是双击
+                    lastTapTime = now;
+                    singleTapTimer = setTimeout(() => {
+                        handleTap();
+                        lastTapTime = 0;
+                    }, 300);
+                }
+            }
+        }
+
+        // --- 绑定事件 ---
+        // 移动端
+        UI.screen.addEventListener('touchstart', handleInputStart, { passive: false });
+        UI.screen.addEventListener('touchend', handleInputEnd);
+        // PC端 (如果不加这个，PC鼠标无法操作)
+        UI.screen.addEventListener('mousedown', handleInputStart);
+        UI.screen.addEventListener('mouseup', handleInputEnd);
+
+        // --- 业务逻辑函数 ---
+
+        function handleTap() {
+            triggerVibrate(50);
+            console.log("Tap Detected"); // 调试用
+            if (STATE.mode === 'IDLE') startFocus();
+            else if (STATE.mode === 'RUNNING') pauseFocus();
+            else if (STATE.mode === 'PAUSED') resumeFocus();
+        }
+
+        function handleDoubleTap() {
+            console.log("Double Tap Detected");
+            if (STATE.mode === 'RUNNING' || STATE.mode === 'PAUSED') completeTask();
+        }
+
+        function handleLongPress() {
+            console.log("Long Press Detected");
+            triggerVibrate(200);
+            resetSystem();
+        }
+
+        function triggerVibrate(ms) {
+            // 尝试调用震动，部分安卓有效，iOS需要用户交互后才允许，且Web震动支持有限
+            if (navigator.vibrate) navigator.vibrate(ms);
+        }
+
+        // --- 状态控制函数 (保持不变) ---
         function startFocus() { STATE.mode = 'RUNNING'; switchView('FOCUS'); UI.border.className = 'border-pulse running'; UI.pauseText.style.display = 'none'; UI.timer.style.opacity = '1'; runTimer(); }
         function pauseFocus() { STATE.mode = 'PAUSED'; clearInterval(STATE.timerId); UI.border.className = 'border-pulse paused'; UI.pauseText.style.display = 'block'; UI.timer.style.opacity = '0.2'; }
         function resumeFocus() { STATE.mode = 'RUNNING'; UI.border.className = 'border-pulse running'; UI.pauseText.style.display = 'none'; UI.timer.style.opacity = '1'; runTimer(); }
-        function completeTask() { STATE.mode = 'IDLE'; clearInterval(STATE.timerId); confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#00ff41', '#00f3ff', '#ffffff'] }); UI.timer.textContent = "DONE"; UI.border.className = 'border-pulse urgent'; setTimeout(() => resetSystem(), 3000); }
+        function completeTask() { 
+            STATE.mode = 'IDLE'; clearInterval(STATE.timerId); 
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#00ff41', '#00f3ff', '#ffffff'] }); 
+            UI.timer.textContent = "DONE"; UI.border.className = 'border-pulse urgent'; 
+            setTimeout(() => resetSystem(), 3000); 
+        }
         function resetSystem() { clearInterval(STATE.timerId); STATE.mode = 'IDLE'; STATE.timeLeft = STATE.totalTime; updateTimerDisplay(); switchView('IDLE'); UI.border.className = 'border-pulse'; UI.pauseText.style.display = 'none'; UI.timer.style.opacity = '1'; }
         function runTimer() { clearInterval(STATE.timerId); STATE.timerId = setInterval(() => { if (STATE.timeLeft > 0) { STATE.timeLeft--; updateTimerDisplay(); if (STATE.timeLeft <= 60) { UI.border.className = 'border-pulse urgent'; UI.screen.style.color = 'var(--neon-red)'; } } else { completeTask(); } }, 1000); }
         function updateTimerDisplay() { const m = Math.floor(STATE.timeLeft / 60); const s = STATE.timeLeft % 60; UI.timer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; }
         function switchView(viewName) { if (viewName === 'IDLE') { UI.idleView.style.opacity = '1'; UI.focusView.style.opacity = '0'; UI.screen.style.color = 'var(--neon-cyan)'; } else { UI.idleView.style.opacity = '0'; UI.focusView.style.opacity = '1'; } }
+
     </script>
 </body>
 </html>
